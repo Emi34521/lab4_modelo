@@ -110,6 +110,11 @@ pub fn main() !void {
     }
     // como siempre, el radio será la raíz cuadrada de la distancia mayor
     radio = std.math.sqrt(radio);
+    // Para la escala es un cálculo un poco feo. Pero básicamente la escala se consigue
+    // al dividir el espacio disponible (por eso width y height) pero tomando la parte más pequeña
+    // de lo contrario, el dibujo se saldría de la pantalla al tener más ancho que alto (o vice versa)
+    // luego se divide entre 2, para centrarlo y luego se divide entre el radio.
+    const escala: f32 = (@as(f32, @floatFromInt(@min(width, height))) / 2.0) / radio;
 
     while (!rl.windowShouldClose()) {
         defer {
@@ -119,9 +124,39 @@ pub fn main() !void {
         }
         framebuffer.clear();
 
-        const dt: f32 = @as(f32, @floatFromInt(delta)) / 1_000_000;
-        _ = dt;
+        //const dt: f32 = @as(f32, @floatFromInt(delta)) / 1_000_000;
+        // recorrer por última vez el modelo y, ahora si, dibujarlo con su respectiva escala
+        for (modelo.faces) |cara| {
+            const a = donde_pantalla(cara.a.position, centro_caja, escala);
+            const b = donde_pantalla(cara.b.position, centro_caja, escala);
+            const c = donde_pantalla(cara.c.position, centro_caja, escala);
 
+            framebuffer.draw_line(a[0], a[1], b[0], b[1], .white);
+            framebuffer.draw_line(b[0], b[1], c[0], c[1], .white);
+            framebuffer.draw_line(c[0], c[1], a[0], a[1], .white);
+        }
         try framebuffer.swap_buffers();
     }
+}
+// esta parte me terminé decantando por hacerla una función auxiliar para evitar que el for de dibujo de
+// los triángulos sea demasiado largo. Básicamente se encarga de escalar el modelo para que esté en pantalla
+// y, además, de indicar como dibujarlo en 2D. Al final del día el wireframe es un dibujo en 3D, pero
+// dibujado en 2D, al menos eso entendí. Retorna un vector con la posición en (x,y) de la pantalla
+// corrección final, originalmente devolvía un vector, pero este resulta ser un struct con .x:f32 al igual
+// que en ".y" esto termina generandome problemas debido a que el framebuffer solo acepta valores positivos
+// porque, obviamente, los pixeles solo pueden ser tipo int. Entonces ahora devuelve un array de 2 con enteros
+// esto me ahorra hacer
+// framebuffer.draw_line(@intFromFloat(a.x) ....) para todos.
+fn donde_pantalla(position: rl.Vector3, centro: rl.Vector3, escala: f32) [2]i32 {
+    // como siempre, primero se hace que este apunte al centro
+    const p_hacia_c = position.subtract(centro);
+    // ahora se escala el punto x del vector hacia el centro del modelo y se desplaza
+    // debido a que el punto (0,0) es la esquina superior izquierda. Entonces el modelo no se
+    // podría cargar
+    const x = p_hacia_c.x * escala + width / 2.0;
+    // se aplica lo mismo que con x, no obstante, con y hay algo a tomar en cuenta, la pantalla como tal
+    // en y crece hacía abajo, es decir, que los ejes están invertidos, entonces tenemos que multiplicarlo
+    // por -1 para que esté orientado correctamente.
+    const y = -p_hacia_c.y * escala + height / 2.0;
+    return .{ @intFromFloat(@round(x)), @intFromFloat(@round(y)) };
 }

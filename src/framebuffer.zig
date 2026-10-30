@@ -19,6 +19,33 @@ pub const Framebuffer = struct {
             .current_color = color,
         };
     }
+    // esta función es reutilizada de mi lab 1 y, básicamente, al fibujar ignora los pixeles fuera de la
+    // pantalla
+    pub fn draw_line(self: *Framebuffer, x0: i32, y0: i32, x1: i32, y1: i32, color: rl.Color) void {
+        var x = x0;
+        var y = y0;
+        const dx: i32 = @intCast(@abs(x1 - x0));
+        const dy: i32 = -@as(i32, @intCast(@abs(y1 - y0)));
+        const sx: i32 = if (x0 < x1) 1 else -1;
+        const sy: i32 = if (y0 < y1) 1 else -1;
+        var err = dx + dy;
+
+        while (true) {
+            if (x >= 0 and y >= 0 and x < self.width and y < self.height) {
+                self.color_buff.drawPixel(x, y, color);
+            }
+            if (x == x1 and y == y1) break;
+            const e2 = 2 * err;
+            if (e2 >= dy) {
+                err += dy;
+                x += sx;
+            }
+            if (e2 <= dx) {
+                err += dx;
+                y += sy;
+            }
+        }
+    }
 
     pub fn clear(self: *Framebuffer) void {
         self.color_buff.clearBackground(self.background_color);
