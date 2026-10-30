@@ -1,4 +1,7 @@
 # lab4_modelo
+## Resultado
+
+![WireFrame del modelo base de blender](mono.png)
 
 Proyecto con Zig **0.16.0** y raylib **6.0**.
 
